@@ -6,6 +6,7 @@ interface WordsContextValue {
   cards: WordCard[];
   addCard: (card: Omit<WordCard, 'id' | 'createdAt' | 'correctAnswers' | 'mistakes' | 'status'>) => void;
   deleteCard: (id: string) => void;
+  updateCard: (id: string, patch: Partial<Pick<WordCard, 'translation' | 'meaning' | 'partOfSpeech' | 'example'>>) => void;
   markCorrect: (id: string) => void;
   markMistake: (id: string) => void;
 }
@@ -38,33 +39,32 @@ export function WordsProvider({ children }: { children: React.ReactNode }) {
     setCards((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
+  const updateCard = useCallback(
+    (id: string, patch: Partial<Pick<WordCard, 'translation' | 'meaning' | 'partOfSpeech' | 'example'>>) => {
+      setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    },
+    []
+  );
+
   const markCorrect = useCallback((id: string) => {
     setCards((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
         const newMistakes = Math.max(0, c.mistakes - 1);
         const newStatus: WordStatus = newMistakes === 0 ? 'learned' : c.status;
-        return {
-          ...c,
-          correctAnswers: c.correctAnswers + 1,
-          mistakes: newMistakes,
-          status: newStatus,
-        };
+        return { ...c, correctAnswers: c.correctAnswers + 1, mistakes: newMistakes, status: newStatus };
       })
     );
   }, []);
 
   const markMistake = useCallback((id: string) => {
     setCards((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        return { ...c, mistakes: c.mistakes + 1, status: 'mistake' as WordStatus };
-      })
+      prev.map((c) => (c.id !== id ? c : { ...c, mistakes: c.mistakes + 1, status: 'mistake' as WordStatus }))
     );
   }, []);
 
   return (
-    <WordsContext.Provider value={{ cards, addCard, deleteCard, markCorrect, markMistake }}>
+    <WordsContext.Provider value={{ cards, addCard, deleteCard, updateCard, markCorrect, markMistake }}>
       {children}
     </WordsContext.Provider>
   );

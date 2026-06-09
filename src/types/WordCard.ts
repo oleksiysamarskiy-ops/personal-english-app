@@ -5,6 +5,8 @@ export interface WordCard {
   english: string;
   translation: string;
   meaning: string;
+  partOfSpeech: string;
+  example: string;
   createdAt: string;
   correctAnswers: number;
   mistakes: number;

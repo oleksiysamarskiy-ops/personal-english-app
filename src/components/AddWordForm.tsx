@@ -16,10 +16,16 @@ export function AddWordForm() {
     setLoading(true);
     try {
       const result = await translateWord(trimmed);
-      addCard({ english: trimmed, translation: result.translation, meaning: result.meaning });
+      addCard({
+        english: trimmed,
+        translation: result.translation,
+        meaning: result.meaning,
+        partOfSpeech: result.partOfSpeech,
+        example: result.example,
+      });
       setInput('');
     } catch {
-      setError('Не удалось получить перевод. Попробуйте ещё раз.');
+      setError('Не удалось получить перевод. Проверьте интернет-соединение.');
     } finally {
       setLoading(false);
     }

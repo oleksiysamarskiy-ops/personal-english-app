@@ -1,74 +1,152 @@
-// Translator utility
-// Currently uses a local stub. To switch to OpenAI API, replace the
-// translateWord function body with an actual API call and keep the
-// same return shape: { translation: string; meaning: string }
+// ─── Translator ──────────────────────────────────────────────────────────────
+// Sources:
+//   • Free Dictionary API  https://api.dictionaryapi.dev/api/v2/entries/en/{word}
+//     — part of speech, English definition, example sentence (no key needed)
+//   • MyMemory API  https://api.mymemory.translated.net/get?q={text}&langpair=en|ru
+//     — Russian translation (free, no key, 5 000 chars/day per IP)
 //
-// Example OpenAI integration:
-// export async function translateWord(text: string): Promise<TranslationResult> {
-//   const response = await fetch('https://api.openai.com/v1/chat/completions', {
-//     method: 'POST',
-//     headers: {
-//       'Content-Type': 'application/json',
-//       'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_KEY}`,
-//     },
-//     body: JSON.stringify({
-//       model: 'gpt-4o-mini',
-//       messages: [{ role: 'user', content:
-//         `Translate the English word/phrase "${text}" to Russian.
-//          Respond ONLY with JSON: {"translation":"...","meaning":"..."}
-//          where meaning is a short definition in Russian.` }],
-//       response_format: { type: 'json_object' },
-//     }),
-//   });
-//   const data = await response.json();
-//   return JSON.parse(data.choices[0].message.content);
-// }
+// Caching: results are stored in localStorage under CACHE_KEY so that the same
+// word is never fetched twice.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CACHE_KEY = 'wordflow_translation_cache';
+const DICT_BASE = 'https://api.dictionaryapi.dev/api/v2/entries/en/';
+const MYMEMORY_BASE = 'https://api.mymemory.translated.net/get';
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface TranslationResult {
-  translation: string;
-  meaning: string;
+  translation: string;   // Russian translation (main)
+  meaning: string;       // English definition
+  partOfSpeech: string;  // noun / verb / adjective …
+  example: string;       // example sentence (English)
 }
 
-const STUB_DICT: Record<string, TranslationResult> = {
-  hello: { translation: 'привет', meaning: 'используется для приветствия людей' },
-  world: { translation: 'мир', meaning: 'планета Земля или всё человечество' },
-  apple: { translation: 'яблоко', meaning: 'сочный фрукт, который растёт на яблоне' },
-  book: { translation: 'книга', meaning: 'набор страниц с текстом или иллюстрациями' },
-  water: { translation: 'вода', meaning: 'прозрачная жидкость, необходимая для жизни' },
-  sun: { translation: 'солнце', meaning: 'звезда в центре нашей солнечной системы' },
-  house: { translation: 'дом', meaning: 'здание, в котором живут люди' },
-  cat: { translation: 'кот', meaning: 'домашнее животное семейства кошачьих' },
-  dog: { translation: 'собака', meaning: 'домашнее животное, преданный спутник человека' },
-  time: { translation: 'время', meaning: 'непрерывное течение событий от прошлого к будущему' },
-  love: { translation: 'любовь', meaning: 'глубокая привязанность или сильное чувство к кому-либо' },
-  friend: { translation: 'друг', meaning: 'человек, с которым у вас близкие дружеские отношения' },
-  work: { translation: 'работа', meaning: 'деятельность с целью заработка или достижения цели' },
-  learn: { translation: 'учиться', meaning: 'приобретать знания или навыки через опыт или обучение' },
-  speak: { translation: 'говорить', meaning: 'произносить слова вслух для общения' },
-  read: { translation: 'читать', meaning: 'воспринимать написанный или напечатанный текст' },
-  write: { translation: 'писать', meaning: 'создавать текст с помощью букв или символов' },
-  think: { translation: 'думать', meaning: 'использовать разум для рассуждения или размышления' },
-  know: { translation: 'знать', meaning: 'иметь информацию или осведомлённость о чём-либо' },
-  go: { translation: 'идти', meaning: 'перемещаться или двигаться в определённом направлении' },
-  good: { translation: 'хороший', meaning: 'имеющий положительные качества или свойства' },
-  bad: { translation: 'плохой', meaning: 'имеющий отрицательные качества; неприятный' },
-  big: { translation: 'большой', meaning: 'значительный по размеру, объёму или количеству' },
-  small: { translation: 'маленький', meaning: 'незначительный по размеру или количеству' },
-  run: { translation: 'бежать', meaning: 'перемещаться быстрым шагом, отрывая обе ноги от земли' },
-  eat: { translation: 'есть', meaning: 'употреблять пищу, поглощать еду' },
-  sleep: { translation: 'спать', meaning: 'находиться в состоянии сна и отдыха' },
-  help: { translation: 'помогать', meaning: 'оказывать содействие или поддержку кому-либо' },
-  play: { translation: 'играть', meaning: 'участвовать в игре или развлекательной деятельности' },
-  make: { translation: 'делать', meaning: 'создавать или производить что-либо' },
-};
+interface CacheEntry {
+  result: TranslationResult;
+  cachedAt: number;
+}
+
+type Cache = Record<string, CacheEntry>;
+
+// ── Cache helpers ─────────────────────────────────────────────────────────────
+
+function loadCache(): Cache {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Cache) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCache(cache: Cache): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // quota exceeded — ignore
+  }
+}
+
+// ── Free Dictionary API ───────────────────────────────────────────────────────
+
+interface DictDefinition {
+  definition: string;
+  example?: string;
+}
+
+interface DictMeaning {
+  partOfSpeech: string;
+  definitions: DictDefinition[];
+}
+
+interface DictEntry {
+  word: string;
+  meanings: DictMeaning[];
+}
+
+async function fetchDictionary(word: string): Promise<{ meaning: string; partOfSpeech: string; example: string } | null> {
+  try {
+    const res = await fetch(`${DICT_BASE}${encodeURIComponent(word.toLowerCase())}`);
+    if (!res.ok) return null;
+
+    const data: DictEntry[] = await res.json();
+    const entry = data[0];
+    if (!entry?.meanings?.length) return null;
+
+    // Pick the first meaning that has a non-empty definition
+    for (const m of entry.meanings) {
+      const def = m.definitions.find((d) => d.definition?.trim());
+      if (def) {
+        return {
+          partOfSpeech: m.partOfSpeech || '',
+          meaning: def.definition.trim(),
+          example: def.example?.trim() || '',
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ── MyMemory translation API ──────────────────────────────────────────────────
+
+async function fetchTranslation(text: string): Promise<string> {
+  try {
+    const url = `${MYMEMORY_BASE}?q=${encodeURIComponent(text)}&langpair=en|ru`;
+    const res = await fetch(url);
+    if (!res.ok) return '';
+
+    const data = await res.json() as {
+      responseData?: { translatedText?: string };
+      matches?: Array<{ translation?: string; quality?: string | number }>;
+    };
+
+    const main = data.responseData?.translatedText?.trim();
+    if (main && main.toUpperCase() !== text.toUpperCase()) return main;
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
 
 export async function translateWord(text: string): Promise<TranslationResult> {
-  await new Promise((r) => setTimeout(r, 350));
   const key = text.trim().toLowerCase();
-  const found = STUB_DICT[key];
-  if (found) return found;
-  return {
-    translation: `[${text}]`,
-    meaning: `английское слово или фраза: "${text}"`,
+
+  // 1. Cache hit
+  const cache = loadCache();
+  if (cache[key]) return cache[key].result;
+
+  // 2. Fetch in parallel
+  const [dictData, ruTranslation] = await Promise.all([
+    fetchDictionary(key),
+    fetchTranslation(text.trim()),
+  ]);
+
+  const result: TranslationResult = {
+    translation: ruTranslation || `[${text}]`,
+    meaning: dictData?.meaning || '',
+    partOfSpeech: dictData?.partOfSpeech || '',
+    example: dictData?.example || '',
   };
+
+  // 3. Save to cache
+  cache[key] = { result, cachedAt: Date.now() };
+  saveCache(cache);
+
+  return result;
+}
+
+// ── Cache management (exported for settings UI if needed) ─────────────────────
+
+export function clearTranslationCache(): void {
+  localStorage.removeItem(CACHE_KEY);
+}
+
+export function getTranslationCacheSize(): number {
+  return Object.keys(loadCache()).length;
 }

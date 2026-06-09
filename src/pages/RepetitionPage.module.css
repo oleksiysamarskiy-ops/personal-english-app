@@ -9,7 +9,7 @@
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 20px;
-  padding: 36px 28px 28px;
+  padding: 32px 28px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,7 +20,7 @@
 .card.cardCorrect { border-color: #00C896; background: rgba(0,200,150,0.05); }
 .card.cardMistake { border-color: #FF5252; background: rgba(255,82,82,0.05); }
 
-.statusHint { margin-bottom: 20px; height: 24px; display: flex; align-items: center; }
+.statusHint { margin-bottom: 10px; height: 24px; display: flex; align-items: center; }
 
 .hintNew, .hintMistake, .hintLearned {
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
@@ -29,6 +29,13 @@
 .hintNew     { color: #6C63FF; background: rgba(108,99,255,0.10); }
 .hintMistake { color: #FF5252; background: rgba(255,82,82,0.10); }
 .hintLearned { color: #00C896; background: rgba(0,200,150,0.10); }
+
+.posHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin-bottom: 8px;
+}
 
 .word {
   font-family: 'Space Grotesk', sans-serif;
@@ -79,9 +86,34 @@
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin-bottom: 28px;
-  max-width: 360px;
+  margin-bottom: 12px;
+  max-width: 380px;
 }
+
+.example {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid var(--accent-dim);
+  border-radius: 0 8px 8px 0;
+  text-align: left;
+  width: 100%;
+  max-width: 380px;
+  box-sizing: border-box;
+}
+.exampleLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  display: block;
+  margin-bottom: 3px;
+}
+.exampleText { color: var(--text-secondary); font-style: italic; }
 
 .actions {
   display: flex;
@@ -104,7 +136,6 @@
 .correctBtn { background: #00C896; color: #fff; }
 .correctBtn:hover  { background: #00b080; }
 .correctBtn:active { transform: scale(0.97); }
-
 .mistakeBtn { background: rgba(255,82,82,0.10); color: #FF5252; border: 1.5px solid rgba(255,82,82,0.25); }
 .mistakeBtn:hover  { background: rgba(255,82,82,0.18); }
 .mistakeBtn:active { transform: scale(0.97); }

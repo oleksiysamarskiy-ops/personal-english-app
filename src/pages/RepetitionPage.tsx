@@ -54,6 +54,10 @@ export function RepetitionPage() {
           {current?.status === 'learned' && <span className={styles.hintLearned}>Повторение</span>}
         </div>
 
+        {current?.partOfSpeech && (
+          <div className={styles.posHint}>{current.partOfSpeech}</div>
+        )}
+
         <div className={styles.word}>{current?.english}</div>
 
         {!revealed && !feedback && (
@@ -65,7 +69,18 @@ export function RepetitionPage() {
         {revealed && !feedback && (
           <div className={styles.answer}>
             <div className={styles.translation}>{current?.translation}</div>
-            <div className={styles.meaning}>{current?.meaning}</div>
+
+            {current?.meaning && (
+              <div className={styles.meaning}>{current.meaning}</div>
+            )}
+
+            {current?.example && (
+              <div className={styles.example}>
+                <span className={styles.exampleLabel}>Пример</span>
+                <span className={styles.exampleText}>{current.example}</span>
+              </div>
+            )}
+
             <div className={styles.actions}>
               <button className={styles.mistakeBtn} onClick={handleMistake}>✗ Ошибка</button>
               <button className={styles.correctBtn} onClick={handleCorrect}>✓ Правильно</button>
