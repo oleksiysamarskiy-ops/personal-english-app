@@ -1,0 +1,15 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.new    { background: rgba(108,99,255,0.12); color: #6C63FF; }
+.mistake { background: rgba(255,82,82,0.12);  color: #FF5252; }
+.learned { background: rgba(0,200,150,0.12);  color: #00C896; }

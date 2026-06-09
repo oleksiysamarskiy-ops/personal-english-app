@@ -1,0 +1,33 @@
+/* ─── Design tokens ─── */
+:root {
+  --bg:             #0F0F13;
+  --surface:        #17171E;
+  --border:         #2A2A35;
+  --accent:         #6C63FF;
+  --accent-dim:     #4B44CC;
+  --text-primary:   #F0EFF8;
+  --text-secondary: #9896B0;
+  --text-tertiary:  #5A596E;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; }
+input  { font-family: inherit; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
